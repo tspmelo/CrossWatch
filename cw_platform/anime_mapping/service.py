@@ -12,7 +12,7 @@ from .descriptors import descriptor_candidates_for_id, parse_descriptor
 from .overrides import find_identity_overrides
 from .storage import index_ready, query_edges, query_identity_natives, query_native_identity
 
-ANIME_NATIVE_PROVIDERS = {"anilist", "simkl", "crosswatch"}
+ANIME_NATIVE_PROVIDERS = {"anilist", "myanimelist", "simkl", "crosswatch"}
 DEFAULT_FEATURES = {"watchlist", "ratings"}
 OPT_IN_FEATURES = {"history", "progress"}
 ANY_PAIR = "*"
@@ -123,6 +123,7 @@ def runtime_pair_feature_options(cfg: Mapping[str, Any], feature: Any = "watchli
 
 
 ANIME_ONLY_TARGET_KEYS = ("anilist", "mal")
+ANIME_ONLY_TARGETS = frozenset({"ANILIST", "MYANIMELIST"})  # providers that receive anime-only filtered adds
 
 
 ANIME_ONLY_AIRED_KEYS = ("tvdb", "tmdb")

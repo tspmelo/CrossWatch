@@ -219,6 +219,7 @@ _AUTH_KEYS = {
     "simkl": ("access_token", "refresh_token"),
     "wetrakr": ("access_token", "refresh_token"),
     "anilist": ("access_token", "token"),
+    "myanimelist": ("access_token",),
     "mdblist": ("api_key", "access_token"),
     "publicmetadb": ("api_key",),
     "nuvio": ("access_token", "refresh_token", "profile_id"),

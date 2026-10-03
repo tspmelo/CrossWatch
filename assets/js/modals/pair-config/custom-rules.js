@@ -9,6 +9,7 @@ const RATINGS_TYPE_RULES = {
   SIMKL: { disable: ["seasons", "episodes"] },
   TMDB: { disable: ["seasons"] },
   ANILIST: { disable: ["seasons", "episodes"] },
+  MYANIMELIST: { disable: ["seasons", "episodes"] },
   STREMIO: { disable: ["seasons", "episodes"] },
 };
 

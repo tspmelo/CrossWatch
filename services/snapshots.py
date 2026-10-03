@@ -840,6 +840,7 @@ def _canonical_item_key(provider: str, feature: Feature, orig_key: str, item: Ma
         "JELLYFIN": ["jellyfin"],
         "EMBY": ["emby"],
         "ANILIST": ["anilist"],
+        "MYANIMELIST": ["mal"],
         "PUBLICMETADB": ["tmdb"],
     }
 

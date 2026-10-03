@@ -86,6 +86,7 @@ except Exception:
 from ..id_map import migrate_media_index, minimal as _minimal, canonical_key as _ck, merge_ids as _merge_ids, _norm_type, part_fragment as _part_fragment
 from ..history_events import history_sync_key, minimal_history_item
 from ..anime_mapping.service import (
+    ANIME_ONLY_TARGETS,
     anime_mapping_pair_feature_options as _anime_pair_feature_options,
     anime_only_adds as _anime_only_adds,
     config_with_pair_feature_options as _anime_config_with_pair_feature_options,
@@ -374,7 +375,7 @@ def _two_way_sync(  # pyright: ignore[reportGeneralTypeIssues]
 
     aops = provs.get(a)
     bops = provs.get(b)
-    anime_pair_opts = _anime_pair_feature_options(cfg, fcfg, feature, a, b, anime_only_default=(a == "ANILIST" or b == "ANILIST"))
+    anime_pair_opts = _anime_pair_feature_options(cfg, fcfg, feature, a, b, anime_only_default=(a in ANIME_ONLY_TARGETS or b in ANIME_ONLY_TARGETS))
     provider_cfg = _anime_config_with_pair_feature_options(cfg, anime_pair_opts)
     provider_cfg = _config_with_pair_libraries(provider_cfg, fcfg, feature, (a, b))
     if not aops or not bops:
@@ -1936,11 +1937,11 @@ def _two_way_sync(  # pyright: ignore[reportGeneralTypeIssues]
         emit=emit, dbg=dbg, dst_name=b, feature=feature,
     )
 
-    if a == "ANILIST" or b == "ANILIST":
+    if a in ANIME_ONLY_TARGETS or b in ANIME_ONLY_TARGETS:
         anime_only_skipped = 0
-        if a == "ANILIST":
+        if a in ANIME_ONLY_TARGETS:
             add_to_A, anime_only_skipped = _anime_only_adds(add_to_A, provider_cfg, anime_pair_opts, feature)
-        if b == "ANILIST":
+        if b in ANIME_ONLY_TARGETS:
             add_to_B, skipped_b = _anime_only_adds(add_to_B, provider_cfg, anime_pair_opts, feature)
             anime_only_skipped += skipped_b
         if anime_only_skipped:

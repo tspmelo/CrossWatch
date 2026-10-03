@@ -61,8 +61,8 @@ function pairInstanceForKind(state, kind){
   if(same(state?.dst, want)) return String(state?.dst_instance||"default")||"default";
   return "default";
 }
-const isAniList=(v)=>same(v,"anilist");
-function hasAniList(state){return isAniList(state?.src)||isAniList(state?.dst)}
+const isAnimeTarget=(v)=>same(v,"anilist")||same(v,"myanimelist");
+function hasAnimeTarget(state){return isAnimeTarget(state?.src)||isAnimeTarget(state?.dst)}
 function hasOwn(obj,key){return !!obj&&Object.prototype.hasOwnProperty.call(obj,key)}
 function normalizeRemoveMode(value){return String(value||"source_deletes").trim().toLowerCase()==="mirror"?"mirror":"source_deletes"}
 function pairRemoveModeFromFeatures(features, fallback="source_deletes"){
@@ -84,9 +84,9 @@ function applyPairRemoveMode(features, mode){
   return features;
 }
 function isTwoWayMode(state){return !!ID("cx-mode-two")?.checked||String(state?.mode||"").toLowerCase().startsWith("two")}
-function anilistCanReceive(state){return isAniList(state?.dst)||(hasAniList(state)&&isTwoWayMode(state))}
+function animeTargetCanReceive(state){return isAnimeTarget(state?.dst)||(hasAnimeTarget(state)&&isTwoWayMode(state))}
 function globalAnimeMappingEnabled(state){return !!state?.cfgRaw?.anime_mapping?.enabled}
-function hasAnimeProvider(state){return hasAniList(state)||isSimkl(state?.src)||isSimkl(state?.dst)||isCrossWatch(state?.src)||isCrossWatch(state?.dst)}
+function hasAnimeProvider(state){return hasAnimeTarget(state)||isSimkl(state?.src)||isSimkl(state?.dst)||isCrossWatch(state?.src)||isCrossWatch(state?.dst)}
 function tmdbMetadataReady(state){return !!String(state?.cfgRaw?.tmdb?.api_key||state?.cfgRaw?.metadata?.tmdb_api_key||"").trim()}
 function collectionRouteSupported(state){
   return featureAllowedForPair(state,"collection");
@@ -145,7 +145,7 @@ function normalizeAnimeFeatureOptions(state, feature){
     state.options[key]=opts;
     return opts;
   }
-  const canOnly=anilistCanReceive(state);
+  const canOnly=animeTargetCanReceive(state);
   if(!hasOwn(opts,"use_anime_mapping")) opts.use_anime_mapping=false;
   opts.use_anime_mapping=!!opts.use_anime_mapping&&globalAnimeMappingEnabled(state);
   if(!opts.use_anime_mapping || !canOnly){
@@ -1377,7 +1377,7 @@ function renderFeaturePanel(state){
     const scrobName = (scrobw.watchlist_name || state.cfgRaw?.scrob?.watchlist_name || "Watchlist");
     const trPair = (state.pairProviders?.trakt) || {};
     const showAnime = hasAnimeProvider(state);
-    const canAnimeOnly = anilistCanReceive(state);
+    const canAnimeOnly = animeTargetCanReceive(state);
     const animeMapDisabled = !globalAnimeMappingEnabled(state);
     const animeOnlyDisabled = !wl.use_anime_mapping || !canAnimeOnly;
 
@@ -1616,7 +1616,7 @@ function renderFeaturePanel(state){
     getOpts(state,"ratings");
     const rt=normalizeAnimeFeatureOptions(state,"ratings"),hasType=t=>Array.isArray(rt.types)&&rt.types.includes(t);
     const showAnime = hasAnimeProvider(state);
-    const canAnimeOnly = anilistCanReceive(state);
+    const canAnimeOnly = animeTargetCanReceive(state);
     const animeMapDisabled = !globalAnimeMappingEnabled(state);
     const animeOnlyDisabled = !rt.use_anime_mapping || !canAnimeOnly;
 
@@ -2287,8 +2287,8 @@ function bindChangeHandlers(state,root){
       const mapOn = !!ID("cx-wl-anime-map")?.checked;
       const only = ID("cx-wl-anime-only");
       if (only) {
-        only.disabled = !mapOn || !anilistCanReceive(state);
-        if (!mapOn || !anilistCanReceive(state)) only.checked = false;
+        only.disabled = !mapOn || !animeTargetCanReceive(state);
+        if (!mapOn || !animeTargetCanReceive(state)) only.checked = false;
         else if (mapOn) only.checked = true;
         only.closest?.(".opt-row")?.classList.toggle("muted", only.disabled);
       }
@@ -2299,7 +2299,7 @@ function bindChangeHandlers(state,root){
       const mapOn = !!ID("cx-rt-anime-map")?.checked;
       const only = ID("cx-rt-anime-only");
       if (only) {
-        only.disabled = !mapOn || !anilistCanReceive(state) || !ID("cx-rt-enable")?.checked;
+        only.disabled = !mapOn || !animeTargetCanReceive(state) || !ID("cx-rt-enable")?.checked;
         if (only.disabled) only.checked = false;
         only.closest?.(".opt-row")?.classList.toggle("muted", only.disabled);
       }
@@ -2309,8 +2309,8 @@ function bindChangeHandlers(state,root){
       const mapOn = !!ID("cx-rt-anime-map")?.checked;
       const only = ID("cx-rt-anime-only");
       if (only) {
-        only.disabled = !mapOn || !anilistCanReceive(state) || !ID("cx-rt-enable")?.checked;
-        if (!mapOn || !anilistCanReceive(state) || !ID("cx-rt-enable")?.checked) only.checked = false;
+        only.disabled = !mapOn || !animeTargetCanReceive(state) || !ID("cx-rt-enable")?.checked;
+        if (!mapOn || !animeTargetCanReceive(state) || !ID("cx-rt-enable")?.checked) only.checked = false;
         else if (mapOn) only.checked = true;
         only.closest?.(".opt-row")?.classList.toggle("muted", only.disabled);
       }
@@ -2396,7 +2396,7 @@ function bindChangeHandlers(state,root){
         add:!!ID("cx-rt-add")?.checked,
         remove:!!ID("cx-rt-remove")?.checked,
         use_anime_mapping:!!ID("cx-rt-anime-map")?.checked,
-        anime_only_sync:!!ID("cx-rt-anime-map")?.checked && !!ID("cx-rt-anime-only")?.checked && anilistCanReceive(state),
+        anime_only_sync:!!ID("cx-rt-anime-map")?.checked && !!ID("cx-rt-anime-only")?.checked && animeTargetCanReceive(state),
         types,
         mode:ID("cx-rt-mode")?.value||"all",
         from_date:(ID("cx-rt-from-date")?.value||"").trim(),
@@ -2832,7 +2832,7 @@ function buildPayload(state,wrap){
   const get=k=>Object.assign(defaultFor(k), (state.options||{})[k]||{});
   const watchlist=get("watchlist");
   const animePair=hasAnimeProvider({src,dst});
-  const animeCanReceive=isAniList(dst)||((isAniList(src)||isAniList(dst))&&modeTwo);
+  const animeCanReceive=isAnimeTarget(dst)||((isAnimeTarget(src)||isAnimeTarget(dst))&&modeTwo);
   const ratings=get("ratings");
   const normalizeAnimePairBlock=(block)=>{
     if(animePair){

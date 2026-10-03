@@ -1853,6 +1853,8 @@ async function loadConfig() {
   
   setRaw("anilist_client_id",     val(cfg.anilist?.client_id));
   setRaw("anilist_client_secret", val(cfg.anilist?.client_secret));
+  setRaw("myanimelist_client_id",     val(cfg.myanimelist?.client_id));
+  setRaw("myanimelist_client_secret", val(cfg.myanimelist?.client_secret));
 
   
   setRaw("tmdb_api_key",        val(cfg.tmdb?.api_key || cfg.metadata?.tmdb_api_key));

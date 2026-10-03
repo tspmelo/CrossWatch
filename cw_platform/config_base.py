@@ -343,6 +343,20 @@ DEFAULT_CFG: dict[str, Any] = {
         },
     },
 
+    "myanimelist": {
+        "client_id": "",                                # From your MyAnimeList API client
+        "client_secret": "",                            # Only for "web" app type clients
+        "access_token": "",                             # OAuth access token (saved after auth)
+        "refresh_token": "",                            # OAuth refresh token (saved after auth)
+        "expires_at": 0,                                # Access token expiry (epoch seconds)
+        "user": {},                                     # Viewer object (id/name)
+        "rate_limit": {
+            "get": 2.0,
+            "patch": 1.0,
+            "delete": 1.0,
+        },
+    },
+
     "mdblist": {
         "auth_method": "",                              # "", "device_code" (default when new), or "api_key" (legacy/manual)
         "client_id": "",                                # Deprecated; CrossWatch MDBList app client_id is supplied internally
@@ -833,7 +847,7 @@ DEFAULT_CFG: dict[str, Any] = {
         "release_tag": "v3",                            # AniBridge release tag
         "refresh_hours": 24,                            # Minimum age before an automatic refresh is considered
         "stale_after_days": 14,                         # UI/status warning threshold
-        "use_for_pairs": ["anilist", "simkl", "crosswatch"],  # Providers that activate anime mapping when present in a pair ("*" = any pair)
+        "use_for_pairs": ["anilist", "myanimelist", "simkl", "crosswatch"],  # Providers that activate anime mapping when present in a pair ("*" = any pair)
         "features": ["watchlist", "ratings", "history"],  # Sync features where anime mapping may apply; history is opt-in per pair
     },
 
@@ -971,6 +985,7 @@ def redact_config(cfg: dict[str, Any]) -> dict[str, Any]:
         "plex": {"account_token", "pms_token", "home_pin", "webhook_secret"},
         "simkl": {"access_token", "refresh_token", "client_secret", "_pending_pin"},
         "anilist": {"access_token", "client_secret"},
+        "myanimelist": {"access_token", "refresh_token", "client_secret", "_pkce_verifier"},
         "mdblist": {"api_key", "access_token", "refresh_token", "_pending_device"},
         "publicmetadb": {"api_key"},
         "wetrakr": {"access_token", "refresh_token"},
@@ -1095,6 +1110,7 @@ CONFIG_TOP_LEVEL_ORDER: tuple[str, ...] = (
     "simkl",
     "mdblist",
     "anilist",
+    "myanimelist",
     "tmdb_sync",
     "publicmetadb",
     "wetrakr",
@@ -2148,7 +2164,7 @@ def _normalize_scheduling(cfg: dict[str, Any]) -> None:
     adv["workflows"] = wf_out
 
 
-ANIME_MAPPING_PAIRS_DEFAULT: list[str] = ["anilist", "simkl", "crosswatch"]
+ANIME_MAPPING_PAIRS_DEFAULT: list[str] = ["anilist", "myanimelist", "simkl", "crosswatch"]
 ANIME_MAPPING_FEATURES_DEFAULT: list[str] = ["watchlist", "ratings", "history"]
 
 

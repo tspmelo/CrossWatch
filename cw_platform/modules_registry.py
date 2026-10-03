@@ -25,6 +25,7 @@ MODULES: dict[str, dict[str, str]] = {
         "_auth_STREMIO":  "providers.auth._auth_STREMIO",
         "_auth_FLOPPY":   "providers.auth._auth_FLOPPY",
         "_auth_ANILIST":  "providers.auth._auth_ANILIST",
+        "_auth_MYANIMELIST": "providers.auth._auth_MYANIMELIST",
         "_auth_TMDB":     "providers.auth._auth_TMDB",
         "_auth_WETRAKR": "providers.auth._auth_WETRAKR",
         "_auth_PUNCHPLAY": "providers.auth._auth_PUNCHPLAY",
@@ -48,6 +49,7 @@ MODULES: dict[str, dict[str, str]] = {
         "_mod_TAUTULLI":   "providers.sync._mod_TAUTULLI",
         "_mod_TRACEARR":   "providers.sync._mod_TRACEARR",
         "_mod_ANILIST":    "providers.sync._mod_ANILIST",
+        "_mod_MYANIMELIST": "providers.sync._mod_MYANIMELIST",
         "_mod_TMDB":       "providers.sync._mod_TMDB",
         "_mod_PUNCHPLAY":  "providers.sync._mod_PUNCHPLAY",
         "_mod_FLICKLIST":  "providers.sync._mod_FLICKLIST",
@@ -59,6 +61,7 @@ MODULES: dict[str, dict[str, str]] = {
 
 PROVIDER_CONNECTION_FIELDS: dict[str, tuple[tuple[str, ...], ...]] = {
     "anilist": (("access_token", "token"),),
+    "myanimelist": (("access_token",),),
     "bingebase": (("access_token",), ("webhook_url",), ("api_key",)),
     "crosswatch": (("root_dir",), ("profile_id",), ("enabled",), ("connected",)),
     "emby": (("server",), ("access_token", "token", "api_key"), ("user_id",), ("verify_ssl",)),

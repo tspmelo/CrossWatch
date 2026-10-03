@@ -69,9 +69,9 @@ def _release_tag(cfg: Mapping[str, Any] | None) -> str:
     return normalize_release_tag((block if isinstance(block, Mapping) else {}).get("release_tag") or "v3")
 
 
-def native_to_anilist(release_tag: str, namespace: str, ident: str, episode: int) -> tuple[int, int] | None:
+def native_to_anilist(release_tag: str, namespace: str, ident: str, episode: int, target: str = "anilist") -> tuple[int, int] | None:
     ns = str(namespace or "").strip().lower()
-    if ns == "anilist":
+    if ns == target:
         aid = _to_int(ident)
         return (aid, int(episode)) if aid else None
     if ns not in _NATIVE_NAMESPACES:
@@ -82,7 +82,7 @@ def native_to_anilist(release_tag: str, namespace: str, ident: str, episode: int
         return None
     hits: set[tuple[int, int]] = set()
     for row in rows:
-        if str(row.get("target_provider") or "").strip().lower() != "anilist":
+        if str(row.get("target_provider") or "").strip().lower() != target:
             continue
         if ns == "anidb" and str(row.get("source_scope") or "").strip().upper() != _ANIDB_REGULAR:
             continue
@@ -93,7 +93,7 @@ def native_to_anilist(release_tag: str, namespace: str, ident: str, episode: int
     return hits.pop() if len(hits) == 1 else None
 
 
-def aired_to_anilist(release_tag: str, show_ids: Mapping[str, Any], season: int | None, episode: int | None) -> tuple[int, int] | None:
+def aired_to_anilist(release_tag: str, show_ids: Mapping[str, Any], season: int | None, episode: int | None, target: str = "anilist") -> tuple[int, int] | None:
     if season is None or season < 0 or episode is None or episode <= 0:
         return None
     for provider in ("tvdb", "tmdb"):
@@ -108,7 +108,7 @@ def aired_to_anilist(release_tag: str, show_ids: Mapping[str, Any], season: int 
         for row in rows:
             if str(row.get("source_kind") or "").strip().lower() != "show":
                 continue
-            if str(row.get("target_provider") or "").strip().lower() != "anilist":
+            if str(row.get("target_provider") or "").strip().lower() != target:
                 continue
             mapped = translate(row.get("source_range"), row.get("target_range"), episode)
             aid = _to_int(row.get("target_id"))
@@ -157,7 +157,7 @@ def _enriched_ids(svc: AnimeMappingService, ids: Mapping[str, Any], media_type: 
     return {**base, **got} if got else base
 
 
-def resolve_target(cfg: Mapping[str, Any] | None, item: Mapping[str, Any]) -> tuple[int, int] | None:
+def resolve_target(cfg: Mapping[str, Any] | None, item: Mapping[str, Any], target: str = "anilist") -> tuple[int, int] | None:
     svc = AnimeMappingService(cfg)
     if not svc.ready():
         return None
@@ -167,7 +167,7 @@ def resolve_target(cfg: Mapping[str, Any] | None, item: Mapping[str, Any]) -> tu
         ids = _enriched_ids(svc, item.get("ids") or {}, "movie")
         for ns in _NATIVE_NAMESPACES:
             if ids.get(ns):
-                hit = native_to_anilist(tag, ns, ids[ns], 1)
+                hit = native_to_anilist(tag, ns, ids[ns], 1, target)
                 if hit:
                     return hit
         return None
@@ -182,12 +182,12 @@ def resolve_target(cfg: Mapping[str, Any] | None, item: Mapping[str, Any]) -> tu
         return None
     hit = None
     if res is None or res.basis != "user_override":
-        hit = aired_to_anilist(tag, show_ids, _to_int(item.get("season")), _to_int(item.get("episode")))
-        own = _to_int(_clean_ids(item.get("show_ids")).get("anilist"))
+        hit = aired_to_anilist(tag, show_ids, _to_int(item.get("season")), _to_int(item.get("episode")), target)
+        own = _to_int(_clean_ids(item.get("show_ids")).get(target))
         if hit and own and hit[0] != own:
             hit = None
     if hit is None and res is not None:
-        hit = native_to_anilist(tag, res.namespace, res.target_id, res.absolute)
+        hit = native_to_anilist(tag, res.namespace, res.target_id, res.absolute, target)
     _dbg(
         "resolved",
         season=_to_int(item.get("season")),

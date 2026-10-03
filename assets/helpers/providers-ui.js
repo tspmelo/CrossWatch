@@ -47,7 +47,7 @@
 
   const AUTH_GROUPS = Object.freeze([
     { id: "sec-auth-media", title: "Media servers", keys: ["PLEX", "JELLYFIN", "EMBY"] },
-    { id: "sec-auth-trackers", title: "Trackers", keys: ["CROSSWATCH", "TRAKT", "SIMKL", "TMDB", "MDBLIST", "PUBLICMETADB", "ANILIST", "WETRAKR", "PUNCHPLAY", "BINGEBASE", "FLICKLIST", "FLOPPY", "SCROB"] },
+    { id: "sec-auth-trackers", title: "Trackers", keys: ["CROSSWATCH", "TRAKT", "SIMKL", "TMDB", "MDBLIST", "PUBLICMETADB", "ANILIST", "MYANIMELIST", "WETRAKR", "PUNCHPLAY", "BINGEBASE", "FLICKLIST", "FLOPPY", "SCROB"] },
     { id: "sec-auth-clients", title: "Media clients", keys: ["NUVIO", "KODI", "STREMIO"] },
     { id: "sec-auth-others", title: "Others", keys: ["TAUTULLI", "TRACEARR"] },
   ]);
@@ -224,6 +224,7 @@
     if (p === "emby" || p === "jellyfin") return hasConfiguredValue(b.access_token) || hasConfiguredValue(b.api_key) || hasConfiguredValue(b.token);
     if (p === "trakt" || p === "simkl") return hasConfiguredValue(b.access_token) || hasConfiguredValue(b.refresh_token);
     if (p === "anilist") return hasConfiguredValue(b.access_token) || hasConfiguredValue(b.token);
+    if (p === "myanimelist") return hasConfiguredValue(b.access_token);
     if (p === "mdblist") return hasConfiguredValue(b.api_key) || hasConfiguredValue(b.access_token);
     if (p === "wetrakr") return hasConfiguredValue(b.access_token) && !b.reauth_required;
     if (p === "punchplay") return hasConfiguredValue(b.access_token);
@@ -788,6 +789,15 @@
       steps: [["1", "Add API app", "Enter your AniList Client ID and Secret"], ["2", "Approve AniList", "Authorize CrossWatch in the browser"], ["3", "Sync anime", "CrossWatch stores the approved token"]],
       order: [".grid2", "#anilist_hint", ".anilist-mapping-rec", ".inline"],
       actions: [{ row: ".inline", status: "#anilist_msg", buttons: "#btn-connect-anilist" }]
+    },
+    MYANIMELIST: {
+      provider: "myanimelist", logo: "MYANIMELIST", help: window.CW.HelpLinks.url("myanimelist"), deleteSelector: "#btn-delete-myanimelist",
+      tabs: { auth: ["lock", "Authentication", "Connect your MyAnimeList account"] },
+      copy: { auth: ["MyAnimeList Authentication", "Connect MyAnimeList with your API client."] },
+      journey: ["Connect to MyAnimeList", "Add your MyAnimeList Client ID (and Client Secret for web apps), then click Connect MyAnimeList and approve the request in the browser window. Anime ID Mapping can improve MyAnimeList matching.", "46,81,162", "46,81,162", "MYANIMELIST"],
+      steps: [["1", "Add API client", "Enter your MyAnimeList Client ID"], ["2", "Approve MyAnimeList", "Authorize CrossWatch in the browser"], ["3", "Sync anime", "CrossWatch stores and refreshes the token"]],
+      order: [".grid2", "#myanimelist_hint", ".inline"],
+      actions: [{ row: ".inline", status: "#myanimelist_msg", buttons: "#btn-connect-myanimelist" }]
     },
     TAUTULLI: {
       provider: "tautulli", logo: "TAUTULLI", help: window.CW.HelpLinks.url("tautulli"), deleteSelector: "#tautulli_disconnect",
@@ -2116,6 +2126,7 @@
         window.initTautulliAuthUI?.();
         window.initTracearrAuthUI?.();
         window.initAniListAuthUI?.();
+        window.initMyAnimeListAuthUI?.();
 
         await refreshAuthPresentation(slot, !!force);
         wireCopyButtons();
@@ -2200,6 +2211,7 @@
     if (/\bSIMKL\b/.test(s)) return "SIMKL";
     if (/\bTRAKT\b/.test(s)) return "TRAKT";
     if (/\bANILIST\b/.test(s)) return "ANILIST";
+    if (/\bMYANIMELIST\b/.test(s)) return "MYANIMELIST";
     if (/\bJELLYFIN\b/.test(s)) return "JELLYFIN";
     if (/\bEMBY\b/.test(s)) return "EMBY";
     return s;

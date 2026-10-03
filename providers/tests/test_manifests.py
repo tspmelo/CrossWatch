@@ -30,6 +30,12 @@ CASES: tuple[ProviderCase, ...] = (
         empty_configured=False,
     ),
     ProviderCase(
+        module_path="sync._mod_MYANIMELIST",
+        expected_name="MYANIMELIST",
+        minimal_cfg={"myanimelist": {"access_token": "tok"}},
+        empty_configured=False,
+    ),
+    ProviderCase(
         module_path="sync._mod_SIMKL",
         expected_name="SIMKL",
         minimal_cfg={"simkl": {"api_key": "k", "access_token": "tok"}},

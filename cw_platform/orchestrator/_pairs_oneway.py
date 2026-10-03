@@ -217,6 +217,7 @@ from ..provider_instances import normalize_instance_id
 from ..id_map import migrate_media_index, minimal as _minimal, canonical_key as _ck, merge_ids as _merge_ids, _norm_type, part_fragment as _part_fragment
 from ..history_events import history_sync_key, minimal_history_item
 from ..anime_mapping.service import (
+    ANIME_ONLY_TARGETS,
     anime_mapping_pair_feature_options as _anime_pair_feature_options,
     anime_only_adds as _anime_only_adds,
     config_with_pair_feature_options as _anime_config_with_pair_feature_options,
@@ -785,7 +786,7 @@ def run_one_way_feature(  # pyright: ignore[reportGeneralTypeIssues]
     dst = str(dst).upper()
     src_ops = provs.get(src)
     dst_ops = provs.get(dst)
-    anime_pair_opts = _anime_pair_feature_options(cfg, fcfg, feature, src, dst, anime_only_default=(dst == "ANILIST"))
+    anime_pair_opts = _anime_pair_feature_options(cfg, fcfg, feature, src, dst, anime_only_default=(dst in ANIME_ONLY_TARGETS))
     provider_cfg = _anime_config_with_pair_feature_options(cfg, anime_pair_opts)
     provider_cfg = _config_with_pair_libraries(provider_cfg, fcfg, feature, (src, dst))
 
@@ -1747,7 +1748,7 @@ def run_one_way_feature(  # pyright: ignore[reportGeneralTypeIssues]
         if retried:
             emit("debug", msg="unresolved.retry", feature=feature, dst=dst, retried=retried)
             
-    if dst == "ANILIST":
+    if dst in ANIME_ONLY_TARGETS:
         adds, anime_only_skipped = _anime_only_adds(adds, provider_cfg, anime_pair_opts, feature)
         if anime_only_skipped:
             emit("debug", msg="anime_mapping.anime_only_filtered", feature=feature, dst=dst, skipped=anime_only_skipped)

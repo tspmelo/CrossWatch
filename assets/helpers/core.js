@@ -81,6 +81,7 @@
     { key: "SIMKL", paths: [["simkl"], ["auth", "simkl"]], keys: ["access_token"] },
     { key: "TRAKT", paths: [["trakt"], ["auth", "trakt"]], keys: ["access_token"] },
     { key: "ANILIST", paths: [["anilist"], ["auth", "anilist"]], keys: ["access_token", "token"] },
+    { key: "MYANIMELIST", paths: [["myanimelist"]], keys: ["access_token"] },
     { key: "JELLYFIN", paths: [["jellyfin"], ["auth", "jellyfin"]], keys: ["access_token"] },
     { key: "EMBY", paths: [["emby"], ["auth", "emby"]], keys: ["access_token", "api_key", "token"] },
     { key: "MDBLIST", paths: [["mdblist"], ["auth", "mdblist"]], keys: ["api_key", "access_token"] },

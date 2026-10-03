@@ -53,6 +53,7 @@ _CAPTURE_PROVIDER_TO_IDKEY: dict[str, str] = {
     "JELLYFIN": "jellyfin",
     "EMBY": "emby",
     "ANILIST": "anilist",
+    "MYANIMELIST": "mal",
     "WETRAKR": "wetrakr",
 }
 

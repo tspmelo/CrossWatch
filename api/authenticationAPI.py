@@ -3384,6 +3384,97 @@ def register_auth(app, *, log_fn: Optional[Callable[[str, str], None]] = None, p
         _probe_bust("anilist")
         return {"ok": True}
 
+    # MYANIMELIST
+    @app.post("/api/myanimelist/save", tags=["auth"])
+    def api_myanimelist_save(payload: dict[str, Any] = Body(...), instance: str = Query("default")) -> dict[str, Any]:
+        try:
+            inst = normalize_instance_id(instance)
+            cfg = load_config()
+            a = ensure_instance_block(cfg, "myanimelist", inst)
+            for key in ("client_id", "client_secret"):
+                val = str((payload or {}).get(key) or "").strip()
+                if val and not _looks_masked_secret(val):
+                    a[key] = val
+            save_config(cfg)
+            return {"ok": True, "instance": inst}
+        except Exception as e:
+            _safe_log(log_fn, "MYANIMELIST", f"[MYANIMELIST] ERROR save: {e}")
+            return {"ok": False, "error": "internal"}
+
+    @app.get("/api/myanimelist/status", tags=["auth"])
+    def api_myanimelist_status(instance: str = Query("default")) -> dict[str, Any]:
+        inst = normalize_instance_id(instance)
+        a = ensure_instance_block(load_config(), "myanimelist", inst)
+        user = a.get("user") if isinstance(a.get("user"), dict) else {}
+        return {"connected": bool(str(a.get("access_token") or "").strip()), "user": user.get("name"), "instance": inst}
+
+    @app.post("/api/myanimelist/authorize", tags=["auth"])
+    def api_myanimelist_authorize(payload: dict[str, Any] = Body(...), instance: str = Query("default")) -> dict[str, Any]:
+        try:
+            origin = (payload or {}).get("origin") or ""
+            if not origin:
+                return {"ok": False, "error": "origin missing"}
+            _myanimelist_prune_state()
+            inst = normalize_instance_id(instance)
+            a = ensure_instance_block(load_config(), "myanimelist", inst)
+            client_id = str(a.get("client_id") or "").strip()
+            if not client_id:
+                return {"ok": False, "error": "MyAnimeList client_id missing"}
+            from providers.auth import _auth_MYANIMELIST as mal_auth
+
+            redirect_uri = f"{origin}/callback/myanimelist"
+            state = secrets.token_urlsafe(16)
+            verifier = mal_auth.new_verifier()
+            MYANIMELIST_STATE[state] = {"instance": inst, "redirect_uri": redirect_uri, "verifier": verifier, "created_at": int(time.time())}
+            return {"ok": True, "authorize_url": mal_auth.build_authorize_url(client_id, redirect_uri, state, verifier)}
+        except Exception as e:
+            _safe_log(log_fn, "MYANIMELIST", f"[MYANIMELIST] ERROR: {e}")
+            return {"ok": False, "error": "internal"}
+
+    @app.get("/callback/myanimelist", tags=["auth"])
+    def oauth_myanimelist_callback(request: Request) -> Response:
+        try:
+            params = dict(request.query_params)
+            code = params.get("code")
+            state = params.get("state")
+            if not code or not state:
+                return PlainTextResponse("Missing code or state.", 400)
+            _myanimelist_prune_state()
+            st = MYANIMELIST_STATE.pop(state, None)
+            if not isinstance(st, dict):
+                return PlainTextResponse("State mismatch.", 400)
+            from providers.auth import _auth_MYANIMELIST as mal_auth
+
+            inst = normalize_instance_id(st.get("instance"))
+            cfg = load_config()
+            try:
+                mal_auth.PROVIDER.finish(cfg, instance_id=inst, code=code, redirect_uri=st.get("redirect_uri"), verifier=st.get("verifier"))
+            except Exception as e:
+                _safe_log(log_fn, "MYANIMELIST", f"[MYANIMELIST] ERROR token exchange: {e}")
+                return PlainTextResponse("MyAnimeList token exchange failed.", 400)
+            ensure_instance_block(cfg, "myanimelist", inst)["auth_completed_at"] = str(time.time_ns())
+            save_config(cfg)
+            _safe_log(log_fn, "MYANIMELIST", "\x1b[92m[MYANIMELIST]\x1b[0m Access token saved.")
+            _probe_bust("myanimelist")
+            return PlainTextResponse("MyAnimeList authorized. You can close this tab and return to the app.", 200)
+        except Exception as e:
+            _safe_log(log_fn, "MYANIMELIST", f"[MYANIMELIST] ERROR: {e}")
+            return PlainTextResponse("Error", 500)
+
+    @app.post("/api/myanimelist/token/delete", tags=["auth"])
+    def api_myanimelist_token_delete(instance: str = Query("default")) -> Any:
+        cfg = load_config()
+        inst = normalize_instance_id(instance)
+        conflict = usage_conflict_response(cfg, "myanimelist", inst)
+        if conflict is not None:
+            return conflict
+        from providers.auth import _auth_MYANIMELIST as mal_auth
+
+        mal_auth.PROVIDER.disconnect(cfg, instance_id=inst)
+        save_config(cfg)
+        _probe_bust("myanimelist")
+        return {"ok": True}
+
 
     # SIMKL
     @app.post("/api/simkl/authorize", tags=["auth"])
@@ -3635,6 +3726,14 @@ def anilist_exchange_code_for_token(*, code: str, redirect_uri: str, instance_id
     save_config(cfg2)
 
     return out
+
+# MYANIMELIST
+MYANIMELIST_STATE: dict[str, dict[str, Any]] = {}
+
+def _myanimelist_prune_state(max_age_s: int = 900) -> None:
+    now = int(time.time())
+    for k in [k for k, v in MYANIMELIST_STATE.items() if now - int(v.get("created_at") or 0) > max_age_s]:
+        MYANIMELIST_STATE.pop(k, None)
 
 # SIMKL
 SIMKL_STATE: dict[str, dict[str, Any]] = {}

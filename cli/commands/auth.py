@@ -51,6 +51,12 @@ ENDPOINTS: dict[str, Endpoints] = {
         needs_origin=True,
         disconnect="/api/anilist/token/delete",
     ),
+    "MYANIMELIST": Endpoints(
+        submit="/api/myanimelist/save",
+        start="/api/myanimelist/authorize",
+        needs_origin=True,
+        disconnect="/api/myanimelist/token/delete",
+    ),
     "MDBLIST": Endpoints(
         submit="/api/mdblist/save",
         start="/api/mdblist/device/start",

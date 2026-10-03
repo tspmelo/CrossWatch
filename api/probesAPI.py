@@ -77,6 +77,7 @@ PROVIDERS: tuple[str, ...] = (
     "simkl",
     "trakt",
     "anilist",
+    "myanimelist",
     "jellyfin",
     "emby",
     "tmdb",
@@ -261,6 +262,7 @@ PROBE_CFG_KEY: dict[str, str] = {
     "SIMKL": "simkl",
     "TRAKT": "trakt",
     "ANILIST": "anilist",
+    "MYANIMELIST": "myanimelist",
     "JELLYFIN": "jellyfin",
     "EMBY": "emby",
     "TMDB": "tmdb_sync",
@@ -372,6 +374,10 @@ def _probe_key(provider_id: str, cfg: Mapping[str, Any]) -> str:
         a = cfg.get("anilist") or {}
         tok = str((a.get("access_token") or a.get("token") or "")).strip()
         return f"anilist|tok:{_secret_cache_tag(tok)}" if tok else "anilist|unconfigured"
+
+    if p == "myanimelist":
+        tok = str(((cfg.get("myanimelist") or {}).get("access_token") or "")).strip()
+        return f"myanimelist|tok:{_secret_cache_tag(tok)}" if tok else "myanimelist|unconfigured"
 
     if p == "tmdb_sync":
         t = cfg.get("tmdb_sync") or {}
@@ -1032,6 +1038,42 @@ def _probe_anilist_detail(cfg: dict[str, Any], max_age_sec: int = PROBE_TTL) -> 
             ok = False
             rsn = "AniList: auth error"
 
+    with _CACHE_LOCK:
+        PROBE_DETAIL_CACHE[key] = (now, ok, rsn)
+    return ok, rsn
+
+def _myanimelist_account(cfg: dict[str, Any]) -> tuple[int, str]:
+    from providers.auth import _auth_MYANIMELIST as mal
+
+    def fetch():
+        try:
+            inst = normalize_instance_id((cfg.get("_cw_probe") or {}).get("instance"))
+            with requests.Session() as sess:
+                r = mal.request_with_auth(
+                    sess, "GET", mal.ME_URL, block=dict(cfg.get("myanimelist") or {}), instance_id=inst,
+                    headers=_provider_headers("myanimelist"), timeout=max(int(HTTP_TIMEOUT), 6), max_retries=1,
+                )
+                return int(r.status_code), r.text or ""
+        except Exception as exc:
+            _set_http_error(str(exc))
+            return 0, ""
+    return _account_fetch("myanimelist", cfg, fetch)
+
+@_persistent_probe("myanimelist")
+def _probe_myanimelist_detail(cfg: dict[str, Any], max_age_sec: int = PROBE_TTL) -> tuple[bool, str]:
+    key = _probe_key("myanimelist", cfg)
+    bust_ts = _consume_bust("myanimelist")
+    now = time.time()
+    cached = PROBE_DETAIL_CACHE.get(key)
+    if cached and (now - cached[0]) < max_age_sec and (not bust_ts or cached[0] >= bust_ts):
+        return cached[1], cached[2]
+
+    if not str(((cfg.get("myanimelist") or {}).get("access_token") or "")).strip():
+        ok, rsn = False, "MyAnimeList: missing access token"
+    else:
+        code, _ = _myanimelist_account(cfg)
+        ok = code == 200
+        rsn = "" if ok else ("MyAnimeList: reconnect required" if code == 401 else _reason_http(code, "MyAnimeList"))
     with _CACHE_LOCK:
         PROBE_DETAIL_CACHE[key] = (now, ok, rsn)
     return ok, rsn
@@ -2158,6 +2200,25 @@ def anilist_user_info(cfg: dict[str, Any], max_age_sec: int = USERINFO_TTL) -> d
         _USERINFO_CACHE[key] = (now, out)
     return out
 
+@_persistent_userinfo("myanimelist")
+def myanimelist_user_info(cfg: dict[str, Any], max_age_sec: int = USERINFO_TTL) -> dict[str, Any]:
+    key = _probe_key("myanimelist", cfg)
+    bust_ts = _consume_bust("myanimelist")
+    now = time.time()
+    cached = _USERINFO_CACHE.get(key)
+    if cached and (now - cached[0]) < max_age_sec and (not bust_ts or cached[0] >= bust_ts) and isinstance(cached[1], dict):
+        return cached[1]
+
+    out: dict[str, Any] = {}
+    if str(((cfg.get("myanimelist") or {}).get("access_token") or "")).strip():
+        code, body = _myanimelist_account(cfg)
+        j = _json_loads(body) if code == 200 else None
+        if isinstance(j, dict) and j.get("id"):
+            out = {"user": {"id": j.get("id"), "name": j.get("name")}}
+    with _CACHE_LOCK:
+        _USERINFO_CACHE[key] = (now, out)
+    return out
+
 def _prov_configured(cfg: dict[str, Any], name: str, instance_id: Any = "default") -> bool:
     n = str(name or "").strip().upper()
 
@@ -2199,6 +2260,9 @@ def _prov_configured(cfg: dict[str, Any], name: str, instance_id: Any = "default
 
     if ck == "anilist":
         return bool(str(blk.get("access_token") or blk.get("token") or "").strip())
+
+    if ck == "myanimelist":
+        return bool(str(blk.get("access_token") or "").strip())
 
     if ck == "jellyfin":
         return bool(str(blk.get("server") or "").strip() and str(blk.get("access_token") or blk.get("token") or "").strip())
@@ -2314,6 +2378,7 @@ DETAIL_PROBES: dict[str, Callable[..., tuple[bool, str]]] = {
     "SIMKL": _probe_simkl_detail,
     "TRAKT": _probe_trakt_detail,
     "ANILIST": _probe_anilist_detail,
+    "MYANIMELIST": _probe_myanimelist_detail,
     "JELLYFIN": _probe_jellyfin_detail,
     "EMBY": _probe_emby_detail,
     "KODI": _probe_kodi_detail,
@@ -2336,6 +2401,7 @@ USERINFO_FNS: dict[str, Callable[..., dict[str, Any]]] = {
     "SIMKL": simkl_user_info,
     "TRAKT": trakt_user_info,
     "ANILIST": anilist_user_info,
+    "MYANIMELIST": myanimelist_user_info,
     "EMBY": emby_user_info,
     "MDBLIST": mdblist_user_info,
     "WETRAKR": wetrakr_user_info,
@@ -2660,6 +2726,7 @@ def register_probes(app: FastAPI, load_config_fn: Callable[[], dict[str, Any]]) 
             taut_ok, taut_reason, cfg_taut = _provider_tuple("TAUTULLI")
             tracearr_ok, tracearr_reason, cfg_tracearr = _provider_tuple("TRACEARR")
             anilist_ok, anilist_reason, cfg_anilist = _provider_tuple("ANILIST")
+            mal_ok, mal_reason, cfg_mal = _provider_tuple("MYANIMELIST")
 
             userinfo_jobs: dict[str, tuple[Callable[..., dict[str, Any]], dict[str, Any]]] = {}
             if plex_ok:
@@ -2670,6 +2737,8 @@ def register_probes(app: FastAPI, load_config_fn: Callable[[], dict[str, Any]]) 
                 userinfo_jobs["TRAKT"] = (trakt_user_info, cfg_trakt)
             if anilist_ok:
                 userinfo_jobs["ANILIST"] = (anilist_user_info, cfg_anilist)
+            if mal_ok:
+                userinfo_jobs["MYANIMELIST"] = (myanimelist_user_info, cfg_mal)
             if emby_ok:
                 userinfo_jobs["EMBY"] = (emby_user_info, cfg_emby)
             if mdbl_ok:
@@ -2703,6 +2772,7 @@ def register_probes(app: FastAPI, load_config_fn: Callable[[], dict[str, Any]]) 
             info_simkl = userinfo.get("SIMKL", {})
             info_trakt = userinfo.get("TRAKT", {})
             info_anilist = userinfo.get("ANILIST", {})
+            info_mal = userinfo.get("MYANIMELIST", {})
             info_emby = userinfo.get("EMBY", {})
             info_mdbl = userinfo.get("MDBLIST", {})
             info_bingebase = userinfo.get("BINGEBASE", {})
@@ -2821,6 +2891,16 @@ def register_probes(app: FastAPI, load_config_fn: Callable[[], dict[str, Any]]) 
                     "connected": anilist_ok,
                     **({} if anilist_ok else {"reason": anilist_reason}),
                     **({} if not info_anilist else {"user": (info_anilist.get("user") or {})}),
+                    "instances": inst_map,
+                    "instances_summary": inst_sum,
+                    "rep_instance": inst_sum.get("rep"),
+                }
+            if "MYANIMELIST" in active_providers:
+                inst_map, inst_sum = _instances_payload("MYANIMELIST")
+                providers_out["MYANIMELIST"] = {
+                    "connected": mal_ok,
+                    **({} if mal_ok else {"reason": mal_reason}),
+                    **({} if not info_mal else {"user": (info_mal.get("user") or {})}),
                     "instances": inst_map,
                     "instances_summary": inst_sum,
                     "rep_instance": inst_sum.get("rep"),
@@ -3097,6 +3177,7 @@ def register_probes(app: FastAPI, load_config_fn: Callable[[], dict[str, Any]]) 
                 "simkl_connected": simkl_ok,
                 "trakt_connected": trakt_ok,
                 "anilist_connected": anilist_ok,
+                "myanimelist_connected": mal_ok,
                 "jellyfin_connected": jelly_ok,
                 "emby_connected": emby_ok,
                 "kodi_connected": kodi_ok,
